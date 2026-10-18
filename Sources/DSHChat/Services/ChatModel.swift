@@ -263,7 +263,15 @@ final class ChatModel: ObservableObject {
                 awaitingResponse = false
                 unsupportedQuestionIDs.removeAll()
             }
-        case .assistantStream(let stream): timeline.apply(stream)
+        case .assistantStream(let stream):
+            if case .end(let attemptID, _) = stream,
+               let live = timeline.live, live.attemptId == attemptID, !live.text.isEmpty {
+                // Transport completion may precede the durable message. Keep
+                // the last answer mounted until that message or turn/end
+                // replaces it, instead of clearing it between deliveries.
+                break
+            }
+            timeline.apply(stream)
         case .unknown: break
         }
         reconcilePendingPrompt()

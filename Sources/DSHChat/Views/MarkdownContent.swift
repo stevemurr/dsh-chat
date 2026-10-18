@@ -88,11 +88,18 @@ enum ChatMarkdown {
 
 struct MarkdownContent: View {
     let text: String
+    var streaming = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(Array(ChatMarkdown.blocks(text).enumerated()), id: \.offset) { _, block in
-                blockView(block)
+        let document = MarkdownSources.extract(from: ChatMarkdown.blocks(text), streaming: streaming)
+        return VStack(alignment: .leading, spacing: 16) {
+            ForEach(Array(document.parts.enumerated()), id: \.offset) { _, part in
+                switch part {
+                case .block(let block):
+                    blockView(block)
+                case .sources(let sources):
+                    SourceChips(sources: sources)
+                }
             }
         }
         .font(.system(size: 16))

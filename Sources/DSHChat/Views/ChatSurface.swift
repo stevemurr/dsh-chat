@@ -20,6 +20,41 @@ struct ChatSurface: View {
         }
     }
 
+    private var showsActivityCard: Bool {
+        guard chat.isBusy, !hasRunningToolCard,
+              chat.timeline.live?.text.isEmpty ?? true else { return false }
+        if chat.pendingPrompt == nil, let last = chat.timeline.items.last,
+           last.turn == chat.timeline.currentTurn, case .assistant = last.content {
+            // The answer can commit before turn/end. Keep its presentation
+            // steady rather than inserting a new Thinking card for that gap.
+            return false
+        }
+        return true
+    }
+
+    private var transcriptMessages: [TranscriptMessage] {
+        let identities = chat.timeline.answerIds
+        var messages = chat.timeline.items.map { item in
+            TranscriptMessage(item: TimelineItem(
+                id: identities.committed[item.id] ?? item.id,
+                seq: item.seq, time: item.time, content: item.content, turn: item.turn
+            ))
+        }
+        if let pending = chat.pendingPrompt {
+            messages.append(TranscriptMessage(item: TimelineItem(
+                id: "pending-user", seq: chat.timeline.cursor + 1, time: .distantPast,
+                content: .user(text: pending, imageCount: 0), turn: chat.timeline.currentTurn
+            )))
+        }
+        if let live = chat.timeline.live, !live.text.isEmpty {
+            messages.append(TranscriptMessage(item: TimelineItem(
+                id: identities.live, seq: chat.timeline.cursor + 1, time: .distantPast,
+                content: .assistant(markdown: live.text), turn: chat.timeline.currentTurn
+            ), streaming: true))
+        }
+        return messages
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             toolbar
@@ -222,22 +257,17 @@ struct ChatSurface: View {
     }
 
     private var transcript: some View {
-        let items = chat.timeline.items
+        let messages = transcriptMessages
+        let items = messages.map(\.item)
         return ScrollViewReader { reader in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        TimelineRow(item: item, cleanUserText: chat.cleanedUserText)
+                    ForEach(Array(messages.enumerated()), id: \.element.item.id) { index, message in
+                        TimelineRow(item: message.item, cleanUserText: chat.cleanedUserText,
+                                    streaming: message.streaming)
                             .padding(.top, rowSpacing(before: index, in: items))
                     }
-                    if let pending = chat.pendingPrompt {
-                        MessageRow(isUser: true, text: pending)
-                            .padding(.top, chat.timeline.items.isEmpty ? 0 : 28)
-                    }
-                    if let live = chat.timeline.live, !live.text.isEmpty {
-                        MessageRow(isUser: false, text: live.text, streaming: true)
-                            .padding(.top, trailingRowSpacing(isActivity: false))
-                    } else if chat.isBusy && !hasRunningToolCard {
+                    if showsActivityCard {
                         ActivityCard(title: chat.connectionLabel,
                                      symbol: chat.isSearching ? "globe" : "ellipsis.bubble",
                                      status: .running,
@@ -248,15 +278,16 @@ struct ChatSurface: View {
                                     .lineSpacing(5).textSelection(.enabled)
                             }
                         }
-                        .padding(.top, trailingRowSpacing(isActivity: true))
+                        .padding(.top, trailingRowSpacing())
                     }
-                    Color.clear.frame(height: 1).id("bottom")
+                    // Keep the gap inside the scroll target so following new
+                    // activity leaves breathing room above the composer.
+                    Color.clear.frame(height: 24).id("bottom")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .overlayScrollbars()
                 .padding(.horizontal, 30)
                 .padding(.top, 26)
-                .padding(.bottom, 16)
             }
             .onScrollGeometryChange(for: Bool.self) { geometry in
                 geometry.contentOffset.y + geometry.containerSize.height >= geometry.contentSize.height - 100
@@ -286,10 +317,10 @@ struct ChatSurface: View {
         return items[index - 1].content.isActivityCard && items[index].content.isActivityCard ? 12 : 28
     }
 
-    private func trailingRowSpacing(isActivity: Bool) -> CGFloat {
+    private func trailingRowSpacing() -> CGFloat {
         if chat.pendingPrompt != nil { return 28 }
         guard let previous = chat.timeline.items.last else { return 0 }
-        return isActivity && previous.content.isActivityCard ? 12 : 28
+        return previous.content.isActivityCard ? 12 : 28
     }
 
     private var composer: some View {
@@ -412,6 +443,11 @@ struct ChatSurface: View {
         chat.newChat()
         presentation.focusRequest += 1
     }
+}
+
+private struct TranscriptMessage {
+    let item: TimelineItem
+    var streaming = false
 }
 
 private struct SuggestionButtonStyle: ButtonStyle {

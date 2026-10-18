@@ -44,7 +44,7 @@ struct MessageRow: View {
                 Text(text).font(.system(size: 16, weight: .medium))
                     .foregroundStyle(ChatTheme.text).lineSpacing(5)
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-            } else { MarkdownContent(text: text) }
+            } else { MarkdownContent(text: text, streaming: streaming) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -53,6 +53,7 @@ struct MessageRow: View {
 struct TimelineRow: View {
     let item: TimelineItem
     let cleanUserText: (String) -> String
+    var streaming = false
 
     var body: some View {
         switch item.content {
@@ -65,7 +66,7 @@ struct TimelineRow: View {
                 }
             }
         case .assistant(let markdown):
-            MessageRow(isUser: false, text: markdown)
+            MessageRow(isUser: false, text: markdown, streaming: streaming)
         case .tool(let tool):
             ToolRow(tool: tool)
         case .reasoning(let text):

@@ -32,6 +32,8 @@ Recent conversations appear in the left sidebar. Search by title or choose a cha
 
 Answers use the available conversation width with readable Markdown, headings, code blocks, and wrapping table cells. Scrollbars overlay the content and fade when idle. The entire app follows macOS light or dark appearance automatically, including open conversations, the composer, and Settings.
 
+Source lists appear directly as rounded website chips as their links arrive, without briefly displaying the unfinished source text. The chips wrap into rows, show the full source title, notes, and URL on hover, and open the source in your browser. Text following a source list stays in its original position below the chips.
+
 Thinking and tool activity share compact, expandable cards. A spinner marks work in progress, a checkmark marks completed activity, and an error indicator marks a failed tool call. Expand a card to inspect its details.
 
 The window hides when focus moves to another app unless you pin it. Hiding keeps the conversation running. Use **Stop** to cancel an active response. Recent chat references and titles are saved in app preferences; messages remain on the DSH host. Removing an entry from this app's history does not delete its host session.

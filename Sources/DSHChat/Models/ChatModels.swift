@@ -93,7 +93,7 @@ enum QuickChatPrompt {
             ? "You are in a lightweight macOS question-and-answer chat. Give useful, concise answers in Markdown. This chat is independent of a workspace. Do not inspect local files or run shell commands unless the user explicitly asks. "
             : ""
         context += webSearch
-            ? "Use the host's web search and web fetch tools when current information or verification would help. Link sources you use. If those tools are unavailable, say so clearly; do not imply that you searched."
+            ? "Use the host's web search and web fetch tools when current information or verification would help. Link sources you use, and finish web-sourced answers with a Sources section containing Markdown links. If those tools are unavailable, say so clearly; do not imply that you searched."
             : "Web search is switched off for this question. Answer from the conversation and your existing knowledge without browsing. Explain any uncertainty about current information."
         return opening + "\n" + context + "\n" + closing + question
     }
